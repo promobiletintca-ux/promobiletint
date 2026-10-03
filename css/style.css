@@ -3276,6 +3276,9 @@ Small Phones
     border:1px solid rgba(214,179,106,.22);
     box-shadow:0 32px 90px rgba(0,0,0,.62), 0 0 44px rgba(214,179,106,.08);
     touch-action:pan-y;
+    user-select:none;
+    -webkit-user-select:none;
+    --compare-position:50%;
 }
 
 .premium-slider::before{
@@ -3307,21 +3310,21 @@ Small Phones
 .premium-compare__image-wrap{
     position:absolute;
     inset:0;
-    width:50%;
+    width:100%;
     overflow:hidden;
-    transition:width .22s ease;
-    will-change:width;
+    clip-path:inset(0 calc(100% - var(--compare-position)) 0 0);
+    will-change:clip-path;
 }
 
 .premium-compare__track{
     position:absolute;
     top:0;
     bottom:0;
-    left:50%;
+    left:var(--compare-position);
     width:2px;
     transform:translateX(-50%);
     background:linear-gradient(180deg, rgba(214,179,106,.92), rgba(214,179,106,.5));
-    box-shadow:0 0 18px rgba(214,179,106,.42);
+    box-shadow:0 0 16px rgba(214,179,106,.32);
     z-index:12;
     pointer-events:none;
 }
@@ -3329,15 +3332,15 @@ Small Phones
 .premium-compare__handle{
     position:absolute;
     top:50%;
-    left:50%;
+    left:var(--compare-position);
     width:56px;
     height:56px;
     transform:translate(-50%,-50%);
     border-radius:50%;
     background:rgba(14,14,14,.9);
-    border:1px solid rgba(214,179,106,.92);
-    box-shadow:0 16px 34px rgba(0,0,0,.46), 0 0 22px rgba(214,179,106,.18);
-    cursor:grab;
+    border:1px solid rgba(231,201,138,.95);
+    box-shadow:0 14px 30px rgba(0,0,0,.5), inset 0 0 0 4px rgba(214,179,106,.1);
+    cursor:ew-resize;
     z-index:16;
     transition:transform .25s ease, box-shadow .25s ease, background .25s ease;
     display:flex;
@@ -3351,12 +3354,14 @@ Small Phones
 }
 
 .premium-compare__handle:hover{
-    transform:translate(-50%,-50%) scale(1.03);
+    transform:translate(-50%,-50%) scale(1.035);
+    border-color:#f0d79f;
+    box-shadow:0 18px 38px rgba(0,0,0,.56), inset 0 0 0 4px rgba(214,179,106,.15);
 }
 
 .premium-compare__handle.dragging{
-    cursor:grabbing;
-    transform:translate(-50%,-50%) scale(1.09);
+    cursor:ew-resize;
+    transform:translate(-50%,-50%) scale(1.06);
 }
 
 .premium-compare__handle-ring{
@@ -3399,7 +3404,7 @@ Small Phones
     padding:9px 14px;
     border-radius:999px;
     background:rgba(10,10,10,.76);
-    border:1px solid rgba(255,255,255,.2);
+    border:1px solid rgba(214,179,106,.38);
     color:#fff;
     font-size:11px;
     font-weight:600;
@@ -3439,6 +3444,10 @@ Small Phones
 .premium-compare__hint.hidden{
     opacity:0;
     transform:translateX(-50%) translateY(10px);
+}
+
+@media (prefers-reduced-motion:reduce){
+    .premium-compare__handle,.premium-compare__hint{transition:none;}
 }
 
 .comparison-features{

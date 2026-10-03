@@ -213,42 +213,54 @@
 
     if (!(afterWrap && handle)) return;
 
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     let isDragging = false;
+    let activePointerId = null;
+    let gesture = null;
     let frame = null;
     let sliderRect = slider.getBoundingClientRect();
     let currentPercent = 50;
+    let targetPercent = 50;
     const localKey = 'proMobileTintCompareHint';
 
-    const setPosition = percent => {
-      currentPercent = Math.max(0, Math.min(100, percent));
-      afterWrap.style.width = `${currentPercent}%`;
-      handle.style.left = `${currentPercent}%`;
+    const clamp = percent => Math.max(0, Math.min(100, percent));
+
+    const renderPosition = percent => {
+      currentPercent = clamp(percent);
+      slider.style.setProperty('--compare-position', `${currentPercent}%`);
       labelNow(currentPercent);
+    };
+
+    const render = () => {
+      const difference = targetPercent - currentPercent;
+      if (Math.abs(difference) < .08) {
+        renderPosition(targetPercent);
+        frame = null;
+        return;
+      }
+
+      renderPosition(currentPercent + difference * (isDragging ? .48 : .22));
+      frame = requestAnimationFrame(render);
+    };
+
+    const scheduleRender = () => {
+      if (reducedMotion.matches) {
+        cancelAnimationFrame(frame);
+        frame = null;
+        renderPosition(targetPercent);
+      } else if (!frame) {
+        frame = requestAnimationFrame(render);
+      }
+    };
+
+    const setTarget = percent => {
+      targetPercent = clamp(percent);
+      scheduleRender();
     };
 
     const updateRect = () => {
       sliderRect = slider.getBoundingClientRect();
     };
-
-    const animateTo = (targetPercent, duration = 260) => {
-      const start = currentPercent;
-      const delta = targetPercent - start;
-      const startTime = performance.now();
-
-      const loop = now => {
-        const progress = Math.min(1, (now - startTime) / duration);
-        setPosition(start + delta * easeOutQuint(progress));
-
-        if (progress < 1) {
-          frame = requestAnimationFrame(loop);
-        }
-      };
-
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(loop);
-    };
-
-    const easeOutQuint = t => 1 - Math.pow(1 - t, 5);
 
     const pointerToPercent = event => {
       const clientX = event.clientX ?? (event.touches && event.touches[0]?.clientX);
@@ -259,32 +271,60 @@
 
     const startDrag = event => {
       if (event.pointerType === 'mouse' && event.button !== 0) return;
-      isDragging = true;
-      handle.classList.add('dragging');
       updateRect();
       hint?.classList.add('hidden');
       localStorage.setItem(localKey, 'true');
-      event.preventDefault();
-      if (typeof slider.setPointerCapture === 'function' && event.pointerId != null) {
-        slider.setPointerCapture(event.pointerId);
+      activePointerId = event.pointerId;
+      gesture = { x: event.clientX, y: event.clientY, horizontal: event.pointerType !== 'touch' };
+
+      if (event.pointerType !== 'touch') {
+        isDragging = true;
+        handle.classList.add('dragging');
+        event.preventDefault();
+        slider.setPointerCapture?.(event.pointerId);
+        setTarget(pointerToPercent(event));
       }
-      setPosition(pointerToPercent(event));
     };
 
     const endDrag = event => {
-      if (!isDragging) return;
+      if (event.pointerId !== activePointerId) return;
+      const wasTouchTap = event.pointerType === 'touch' && gesture && !gesture.horizontal;
       isDragging = false;
       handle.classList.remove('dragging');
-      if (typeof slider.releasePointerCapture === 'function' && event.pointerId != null) {
+      if (slider.hasPointerCapture?.(event.pointerId)) {
         slider.releasePointerCapture(event.pointerId);
       }
+      activePointerId = null;
+      gesture = null;
+      if (wasTouchTap) setTarget(pointerToPercent(event));
     };
 
     const moveDrag = event => {
+      if (event.pointerId !== activePointerId) return;
+
+      if (event.pointerType === 'touch' && gesture && !gesture.horizontal) {
+        const distanceX = Math.abs(event.clientX - gesture.x);
+        const distanceY = Math.abs(event.clientY - gesture.y);
+        if (distanceY > distanceX && distanceY > 8) {
+          activePointerId = null;
+          gesture = null;
+          return;
+        }
+        if (distanceX <= 8) return;
+        gesture.horizontal = true;
+        isDragging = true;
+        handle.classList.add('dragging');
+        slider.setPointerCapture?.(event.pointerId);
+      }
+
       if (!isDragging) return;
       event.preventDefault();
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => setPosition(pointerToPercent(event)));
+      setTarget(pointerToPercent(event));
+    };
+
+    const clickToCompare = event => {
+      if (event.pointerType === 'touch' || isDragging) return;
+      setTarget(pointerToPercent(event));
     };
 
     const keyControl = event => {
@@ -292,19 +332,19 @@
       const step = event.shiftKey ? 10 : 2;
       if (event.key === 'ArrowLeft' || event.key === 'ArrowDown') {
         event.preventDefault();
-        setPosition(currentPercent - step);
+        setTarget(currentPercent - step);
       }
       if (event.key === 'ArrowRight' || event.key === 'ArrowUp') {
         event.preventDefault();
-        setPosition(currentPercent + step);
+        setTarget(currentPercent + step);
       }
       if (event.key === 'Home') {
         event.preventDefault();
-        setPosition(0);
+        setTarget(0);
       }
       if (event.key === 'End') {
         event.preventDefault();
-        setPosition(100);
+        setTarget(100);
       }
     };
 
@@ -315,25 +355,34 @@
 
     const onResize = () => {
       updateRect();
-      setPosition(currentPercent);
+      renderPosition(currentPercent);
     };
 
     slider.addEventListener('pointerdown', startDrag, { passive: false });
     window.addEventListener('pointermove', moveDrag, { passive: false });
     window.addEventListener('pointerup', endDrag, { passive: true });
     window.addEventListener('pointercancel', endDrag, { passive: true });
+    slider.addEventListener('pointermove', event => {
+      if (event.pointerType === 'mouse' && !isDragging) setTarget(pointerToPercent(event));
+    }, { passive: true });
+    slider.addEventListener('click', clickToCompare, { passive: true });
     handle.addEventListener('keydown', keyControl, { passive: true });
     handle.addEventListener('focus', handleInteraction, { passive: true });
     handle.addEventListener('pointerenter', handleInteraction, { passive: true });
     handle.addEventListener('touchstart', handleInteraction, { passive: true });
     window.addEventListener('resize', debounce(onResize, 120), { passive: true });
 
-    if (!localStorage.getItem(localKey)) {
-      setTimeout(() => animateTo(55, 260), 300);
-      setTimeout(() => animateTo(50, 260), 700);
+    if (!localStorage.getItem(localKey) && !reducedMotion.matches && 'IntersectionObserver' in window) {
+      const introObserver = new IntersectionObserver(entries => {
+        if (!entries.some(entry => entry.isIntersecting)) return;
+        introObserver.disconnect();
+        window.setTimeout(() => setTarget(57), 180);
+        window.setTimeout(() => setTarget(50), 800);
+      }, { threshold: .45 });
+      introObserver.observe(slider);
     }
 
-    setPosition(50);
+    renderPosition(50);
   };
 
   const initTintVisualizer = () => {
