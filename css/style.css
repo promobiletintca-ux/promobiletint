@@ -5240,74 +5240,116 @@ order:-1;
     color:var(--gold);
 }
 
-/* Scope the sweep to the existing logo link, keeping the header layout unchanged. */
+/*
+   The reflection layers use the logo PNG itself as an alpha mask.  This is
+   important: unlike the older rectangular sweep, light cannot be painted in
+   the transparent space around the artwork.
+*/
 .logo-shine {
     position:relative;
-    display:inline-block;
-    overflow:hidden;
+    display:inline-flex;
     line-height:0;
+    transition:transform .35s ease;
 }
 
 .logo-shine img {
     position:relative;
     z-index:1;
+    display:block;
+}
+
+.logo-shine:hover {
+    transform:scale(1.04);
+}
+
+.logo-shine img:hover {
+    transform:none;
 }
 
 .logo-shine::after,
 .logo-shine::before {
     content:"";
     position:absolute;
+    inset:0;
     z-index:2;
     pointer-events:none;
     opacity:0;
-    will-change:transform,opacity;
+    background-repeat:no-repeat;
+    -webkit-mask-image:url("../images/logo/logo.png");
+    mask-image:url("../images/logo/logo.png");
+    mask-mode:alpha;
+    -webkit-mask-size:contain;
+    mask-size:contain;
+    -webkit-mask-repeat:no-repeat;
+    mask-repeat:no-repeat;
+    -webkit-mask-position:center;
+    mask-position:center;
+    will-change:background-position, opacity;
 }
 
 .logo-shine::after {
-    top:-55%;
-    bottom:auto;
-    left:-42%;
-    width:24%;
-    height:210%;
-    background:linear-gradient(105deg,
+    /* Broad, feathered studio illumination; no identifiable stripe edge. */
+    background-image:linear-gradient(108deg,
         transparent 0%,
-        rgba(255,255,255,0) 28%,
-        rgba(255,239,203,.18) 42%,
-        rgba(255,255,255,.56) 49%,
-        rgba(255,252,239,.80) 51%,
-        rgba(234,191,103,.30) 55%,
-        rgba(255,255,255,0) 72%,
+        rgba(235,192,112,0) 28%,
+        rgba(255,228,177,.08) 39%,
+        rgba(255,242,211,.24) 48%,
+        rgba(255,251,237,.38) 54%,
+        rgba(236,188,96,.18) 62%,
+        rgba(235,192,112,0) 74%,
         transparent 100%);
-    transform:translate3d(-220%,0,0) skewX(-24deg);
-    animation:logoLightSweep 7s cubic-bezier(.22,.61,.36,1) infinite;
+    background-size:250% 240%;
+    background-position:-175% 58%;
+    animation:logoSpecularPass 8s cubic-bezier(.22,.61,.36,1) infinite;
 }
 
 .logo-shine::before {
-    top:50%;
-    left:0;
-    width:14px;
-    height:14px;
-    background:radial-gradient(circle,rgba(255,255,255,.42) 0%,rgba(245,205,125,.14) 32%,transparent 70%);
-    transform:translate3d(-180%,-50%,0);
-    animation:logoLightGlint 7s cubic-bezier(.22,.61,.36,1) infinite;
+    /* A smaller diffused glint travels with the broad field for a little depth. */
+    background-image:radial-gradient(ellipse 18% 45% at 50% 50%,
+        rgba(255,252,240,.38) 0%,
+        rgba(255,232,182,.16) 34%,
+        rgba(234,187,97,0) 72%);
+    background-size:250% 180%;
+    background-position:-170% 44%;
+    animation:logoSpecularGlint 8s cubic-bezier(.22,.61,.36,1) infinite;
 }
 
-@keyframes logoLightSweep {
-    0%, 84%, 100% { opacity:0; transform:translate3d(-220%,0,0) skewX(-24deg); }
-    85% { opacity:0; }
-    91% { opacity:.95; }
-    99% { opacity:0; transform:translate3d(680%,0,0) skewX(-24deg); }
+@keyframes logoSpecularPass {
+    /* The pass lasts 1.2s; the remaining 6.8s is entirely unlit. */
+    0%, 79%, 100% { opacity:0; background-position:-175% 58%; }
+    81% { opacity:0; background-position:-175% 58%; }
+    84% { opacity:.52; }
+    94% { opacity:.52; background-position:275% 42%; }
+    96%, 100% { opacity:0; background-position:275% 42%; }
 }
 
-@keyframes logoLightGlint {
-    0%, 89%, 100% { opacity:0; transform:translate3d(-180%,-50%,0); }
-    91% { opacity:.62; }
-    98% { opacity:0; transform:translate3d(900%,-50%,0); }
+@keyframes logoSpecularGlint {
+    0%, 80%, 100% { opacity:0; background-position:-170% 44%; }
+    82% { opacity:0; background-position:-170% 44%; }
+    86% { opacity:.34; }
+    93% { opacity:.34; background-position:270% 56%; }
+    95%, 100% { opacity:0; background-position:270% 56%; }
 }
 
 @media (max-width:768px) {
-    .logo-shine::after { width:20%; }
-    .logo-shine::before { width:10px; height:10px; }
+    .logo-shine::after { animation-name:logoSpecularPassMobile; }
+    .logo-shine::before { animation-name:logoSpecularGlintMobile; }
+}
+
+@keyframes logoSpecularPassMobile {
+    0%, 79%, 100% { opacity:0; background-position:-175% 58%; }
+    81% { opacity:0; background-position:-175% 58%; }
+    84% { opacity:.40; }
+    94% { opacity:.40; background-position:275% 42%; }
+    96%, 100% { opacity:0; background-position:275% 42%; }
+}
+
+@keyframes logoSpecularGlintMobile {
+    0%, 80%, 100% { opacity:0; background-position:-170% 44%; }
+    82% { opacity:0; background-position:-170% 44%; }
+    86% { opacity:.26; }
+    93% { opacity:.26; background-position:270% 56%; }
+    95%, 100% { opacity:0; background-position:270% 56%; }
 }
 
 @media (prefers-reduced-motion:reduce) {
