@@ -20,11 +20,16 @@
       return;
     }
 
+    if (!navMenu.id) navMenu.id = 'primaryNav';
+    menuToggle.setAttribute('aria-controls', navMenu.id);
+    menuToggle.setAttribute('aria-expanded', 'false');
+
     const closeNavigation = () => {
       menuToggle.classList.remove('active');
       navMenu.classList.remove('active');
       menuToggle.setAttribute('aria-expanded', 'false');
       document.body.classList.remove('menu-open');
+      menuToggle.focus();
     };
 
     const openNavigation = () => {
@@ -58,7 +63,7 @@
 
     document.addEventListener('keydown', event => {
       if (event.key === 'Escape') {
-        closeNavigation();
+        if (navMenu.classList.contains('active')) closeNavigation();
       }
     });
 
@@ -109,7 +114,7 @@
   const initScrollReveal = () => {
     // Long package lists stay visible without waiting for a scroll-reveal threshold.
     const sections = qsa('section:not(.ppf-packages)');
-    if (!sections.length || !window.IntersectionObserver) return;
+    if (!sections.length || !window.IntersectionObserver || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const revealObserver = new IntersectionObserver((entries, observer) => {
       entries.forEach(entry => {

@@ -5731,6 +5731,11 @@ order:-1;
     .ppf-card-image { margin-bottom:20px; }
 }
 
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration:.01ms !important; animation-iteration-count:1 !important; scroll-behavior:auto !important; transition-duration:.01ms !important; }
+    .hero-video { display:none; }
+}
+
 /* Dedicated paint protection film page */
 .ppf-hero { background-position:center; }
 .ppf-hero .hero-buttons { margin-top:30px; }
